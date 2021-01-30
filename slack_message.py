@@ -1,5 +1,10 @@
+import json
 from slack import WebClient
-TOKEN = 'xoxb-1718477597872-1691553373925-sLmlcGaqhFZQ3o7RAIh3aTFl'
+
+with open('config.json') as config_file:
+    config = json.load(config_file)
+
+TOKEN = config['REDDIT_BOT_TOKEN']
 WALLSTREETBETS_CHANNEL = 'wallstreetbets'
 
 
