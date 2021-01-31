@@ -9,8 +9,6 @@ SYMBOLS = list(get_companies_df().company_ticker)  # to be queried only once
 
 class RedditComment:
     def __init__(self, praw_comment):
-        if not praw_comment.author:
-            print('test')
         self.author_name = praw_comment.author.name
         self.body = praw_comment.body
         self.created_time = datetime.datetime.fromtimestamp(praw_comment.created_utc)

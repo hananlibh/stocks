@@ -3,12 +3,15 @@ import datetime
 from Comment import RedditComment
 import pandas as pd
 import os
-from typing import List
+from typing import List, Union
+import logging
 
 WALLSTREETBETS_SUBREDDIT = "wallstreetbets"
 COMMENTS_PATH = 'daily_comments/wallstreetbets_{day}.csv'
 DAILY_DISCUSSION = f'Daily Discussion Thread for {datetime.datetime.now().strftime("%B %d, %Y")}'
 WEEKEND_DISCUSSION = f'Weekend Discussion Thread for the Weekend of '
+
+logger = logging.getLogger(__name__)
 
 reddit = praw.Reddit(
     client_id="Fs5hchYYgDmXfQ",
@@ -26,8 +29,10 @@ def get_daily_discussion():
             return submission
 
 
-def process_comments() -> List[dict]:
+def process_comments() -> Union[List[dict], None]:
     submission = get_daily_discussion()
+    if not submission:
+        return None
     submission.comments.replace_more(limit=0)
     comments_list = []
     # This is giving us only top level comments not the full comment tree:
@@ -36,7 +41,7 @@ def process_comments() -> List[dict]:
     # TODO: check multi processing to query multiple times
     for i, comment in enumerate(submission.comments):
         if i % 50 == 0:
-            print(f'Processing {i}s comment')
+            logger.info(f'Processing {i}s comment')
         if comment.body != '[deleted]':
             comments_list.append(RedditComment(comment).to_dict())
     return comments_list
@@ -46,22 +51,22 @@ def update_comments_csv():
     comments_path = COMMENTS_PATH.format(day=datetime.datetime.now().strftime("%Y_%m_%d"))
     if os.path.exists(comments_path):
         df_results = pd.read_csv(comments_path, index_col=0)
+        logger.info("Daily comment file found, updating")
     else:
         df_results = pd.DataFrame({'author': pd.Series([], dtype='str'),
                                    'body': pd.Series([], dtype='str'),
                                    'created_time': pd.Series([], dtype='datetime64[ns]'),
                                    'symbols': pd.Series([], dtype='str'),  # as str for csv to save easily
                                    'score': pd.Series([], dtype='float')})
-    new_df = pd.DataFrame(process_comments())
+        logger.info("Creating new daily comment file")
+    comments_list = process_comments()
+    if comments_list is None:
+        return None
+    new_df = pd.DataFrame(comments_list)
     df_results = df_results.append(new_df).drop_duplicates(subset=['author', 'created_time'])
     safely_create_folder(comments_path.split('/')[0])
     df_results.to_csv(comments_path)
-
-
-def process_companies():
-    comments_path = COMMENTS_PATH.format(day=datetime.datetime.now().strftime("%Y_%m_%d"))
-    comments = pd.read_csv(comments_path)
-    comments.groupby([comments.created_time.hour])
+    return df_results
 
 
 def safely_create_folder(directory):
