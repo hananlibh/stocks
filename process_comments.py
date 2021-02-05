@@ -21,12 +21,14 @@ reddit = praw.Reddit(
 
 
 def get_daily_discussion():
-    # Assuming that daily discussion is always in the top 5
-    hot_submissions = list(reddit.subreddit(WALLSTREETBETS_SUBREDDIT).hot(limit=5))
-    for submission in hot_submissions:
-        # Daily Discussion Thread for January 29, 2021 - Pt. II
-        if DAILY_DISCUSSION in submission.title or WEEKEND_DISCUSSION in submission.title:
-            return submission
+    # Assuming daily discussion is always hottest
+    hot_submissions = list(reddit.subreddit(WALLSTREETBETS_SUBREDDIT).hot(limit=3))
+    return hot_submissions[0]
+    # TODO: Resolve what to do with other submissions
+    # for submission in hot_submissions:
+    #     # Daily Discussion Thread for January 29, 2021 - Pt. II
+    #     if DAILY_DISCUSSION in submission.title or WEEKEND_DISCUSSION in submission.title:
+    #         return submission
 
 
 def process_comments() -> Union[List[dict], None]:
@@ -42,7 +44,7 @@ def process_comments() -> Union[List[dict], None]:
     for i, comment in enumerate(submission.comments):
         if i % 50 == 0:
             logger.info(f'Processing {i}s comment')
-        if comment.body != '[deleted]':
+        if comment.body != '[deleted]' and comment.author is not None:
             comments_list.append(RedditComment(comment).to_dict())
     return comments_list
 
